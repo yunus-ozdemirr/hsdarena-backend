@@ -9,15 +9,15 @@ import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
 @ApiBearerAuth('admin-token')
 @Controller('quiz')
 export class QuizController {
-  constructor(private readonly service: QuizService) {}
+  constructor(private readonly service: QuizService) { }
 
   @UseGuards(AdminJwtGuard)
   @Post('create')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create a new quiz',
     description: 'Create a new quiz with questions and settings. Requires admin authentication.'
   })
-  @ApiBody({ 
+  @ApiBody({
     type: CreateQuizDto,
     description: 'Quiz creation data',
     examples: {
@@ -59,8 +59,8 @@ export class QuizController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Quiz created successfully',
     schema: {
       type: 'object',
@@ -73,8 +73,8 @@ export class QuizController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 401, 
+  @ApiResponse({
+    status: 401,
     description: 'Unauthorized - Invalid or missing admin token',
     schema: {
       type: 'object',
@@ -92,7 +92,7 @@ export class QuizController {
 
   @UseGuards(AdminJwtGuard)
   @Post(':quizId/session')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create a quiz session',
     description: 'Create a new session for an existing quiz. Requires admin authentication.'
   })
@@ -102,7 +102,7 @@ export class QuizController {
     example: 'quiz_123',
     type: 'string'
   })
-  @ApiBody({ 
+  @ApiBody({
     type: CreateSessionDto,
     description: 'Session creation data (empty body)',
     examples: {
@@ -113,8 +113,8 @@ export class QuizController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Session created successfully',
     schema: {
       type: 'object',
@@ -127,8 +127,8 @@ export class QuizController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 404, 
+  @ApiResponse({
+    status: 404,
     description: 'Quiz not found',
     schema: {
       type: 'object',
@@ -145,7 +145,7 @@ export class QuizController {
 
   @UseGuards(AdminJwtGuard)
   @Get(':quizId/questions')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get quiz questions',
     description: 'Retrieve all questions for a specific quiz. Requires admin authentication.'
   })
@@ -155,8 +155,8 @@ export class QuizController {
     example: 'quiz_123',
     type: 'string'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Questions retrieved successfully',
     schema: {
       type: 'array',
@@ -192,7 +192,7 @@ export class QuizController {
   }
 
   @Get(':quizId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get quiz details',
     description: 'Retrieve quiz details by quiz ID. Public endpoint.'
   })
@@ -202,8 +202,8 @@ export class QuizController {
     example: 'quiz_123',
     type: 'string'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Quiz retrieved successfully',
     schema: {
       type: 'object',
@@ -237,8 +237,8 @@ export class QuizController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 404, 
+  @ApiResponse({
+    status: 404,
     description: 'Quiz not found'
   })
   getQuiz(@Param('quizId') quizId: string) {
@@ -246,7 +246,7 @@ export class QuizController {
   }
 
   @Get('session/:sessionCode/questions')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get session questions',
     description: 'Retrieve questions for a specific quiz session by session code. Public endpoint.'
   })
@@ -256,8 +256,8 @@ export class QuizController {
     example: 'ABC123',
     type: 'string'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Session questions retrieved successfully',
     schema: {
       type: 'array',
@@ -286,5 +286,58 @@ export class QuizController {
   })
   getSessionQuestions(@Param('sessionCode') sessionCode: string) {
     return this.service.getSessionQuestions(sessionCode);
+  }
+
+  @Get('session/:sessionCode/current-question')
+  @ApiOperation({
+    summary: 'Get current active question',
+    description: 'Retrieve only the current active question for a specific quiz session. This prevents teams from seeing all questions via browser DevTools. Public endpoint.'
+  })
+  @ApiParam({
+    name: 'sessionCode',
+    description: 'Session code to get current question for',
+    example: 'ABC123',
+    type: 'string'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current question retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', example: 'uuid-here' },
+        sessionCode: { type: 'string', example: 'ABC123' },
+        currentQuestionIndex: { type: 'number', example: 0 },
+        totalQuestions: { type: 'number', example: 10 },
+        question: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'question-uuid' },
+            index: { type: 'number', example: 1 },
+            text: { type: 'string', example: 'What is 5 + 3?' },
+            type: { type: 'string', example: 'MCQ' },
+            choices: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', example: 'A' },
+                  text: { type: 'string', example: '8' }
+                }
+              }
+            },
+            timeLimitSec: { type: 'number', example: 30 },
+            points: { type: 'number', example: 100 }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Session or question not found'
+  })
+  getCurrentQuestion(@Param('sessionCode') sessionCode: string) {
+    return this.service.getCurrentQuestion(sessionCode);
   }
 }

@@ -476,3 +476,32 @@ Test amacıyla basit Team endpoint’leri oluşturularak işlevsel doğrulama sa
 
 Sonuç:
 Tüm gereksinimler başarıyla yerine getirildi. Kod, mevcut Prisma ve Redis altyapısı ile tam uyumludur.
+
+---
+
+**Görev 3 – Current Question Endpoint**
+
+**Sorumlu:** [Yunus Ozdemir]
+
+**Tarih:** 11 Aralık 2025
+
+**Yapılan İşlemler:**
+
+- `GET /api/quiz/session/:sessionCode/current-question` endpoint'i eklendi.
+
+- Bu endpoint sadece aktif soruyu döndürerek, takımların tarayıcı geliştirici araçlarında (F12) tüm soruları görmesini engeller.
+
+- `QuizService.getCurrentQuestion()` metodu oluşturuldu:
+  - Session'ın `currentQuestionIndex` değerine göre sadece mevcut soruyu getirir
+  - Toplam soru sayısı bilgisini de döndürür
+  - Aktif soru yoksa `404 Not Found` hatası verir
+
+- Swagger UI dokümantasyonu tam olarak eklendi (örnek request/response ile).
+
+- Public endpoint olarak tasarlandı (team token gerektirmez).
+
+**Amaç:**  
+Team tarafında quiz güvenliğini artırmak. Önceden `/session/:code/questions` endpoint'i tüm soruları döndürüyordu, bu da güvenlik açığı oluşturuyordu.
+
+**Sonuç:**  
+Frontend ekibi artık sadece mevcut aktif soruyu çekebilir, quiz bütünlüğü korunur.
