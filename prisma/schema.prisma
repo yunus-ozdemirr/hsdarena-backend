@@ -40,8 +40,8 @@ model Quiz {
 }
 
 model Question {
-  id          String   @id @default(uuid())
-  quizId      String
+  id          String   @id @default(uuid()) @db.Uuid
+  quizId      String   @db.Uuid
   quiz        Quiz     @relation(fields: [quizId], references: [id])
   text        String
   type        QuestionType   // 'MCQ' | 'TF'

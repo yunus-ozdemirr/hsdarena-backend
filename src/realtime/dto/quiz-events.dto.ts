@@ -31,6 +31,9 @@ export class QuestionDto {
   choices?: QuestionChoiceDto[];
 
   @IsNumber()
+  timeLimitSec: number;
+
+  @IsNumber()
   points: number;
 }
 

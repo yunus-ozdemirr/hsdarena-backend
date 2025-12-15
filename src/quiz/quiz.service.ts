@@ -1,20 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../infra/prisma/prisma.service';
 
-
-function randomCode(len = 6) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
-}
-
-
 @Injectable()
 export class QuizService {
   constructor(private prisma: PrismaService) { }
 
-
   async createQuiz(userId: string, dto: any) {
-    return this.prisma.quiz.create({
+    const quiz = await this.prisma.quiz.create({
       data: {
         title: dto.title,
         createdBy: userId,
@@ -30,26 +22,42 @@ export class QuizService {
             points: q.points
           }))
         }
+      },
+      include: {
+        questions: true
       }
     });
+
+    return {
+      id: quiz.id,
+      title: quiz.title,
+      createdBy: quiz.createdBy,
+      createdAt: quiz.createdAt,
+      questionsCount: quiz.questions.length
+    };
   }
 
+  async getAllQuizzes(userId: string) {
+    const quizzes = await this.prisma.quiz.findMany({
+      where: { createdBy: userId },
+      include: {
+        _count: {
+          select: { questions: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
 
-  async createSession(quizId: string) {
-    const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } });
-    if (!quiz) throw new NotFoundException('Quiz not found');
-
-
-    let code = randomCode();
-    // çakışma kontrolü
-    // eslint-disable-next-line no-constant-condition
-    while (await this.prisma.quizSession.findUnique({ where: { sessionCode: code } })) code = randomCode();
-
-
-    return this.prisma.quizSession.create({ data: { quizId, sessionCode: code } });
+    return quizzes.map(quiz => ({
+      id: quiz.id,
+      title: quiz.title,
+      visibility: quiz.visibility,
+      createdAt: quiz.createdAt,
+      questionsCount: quiz._count.questions
+    }));
   }
 
-  async getQuizQuestions(quizId: string) {
+  async getQuizById(quizId: string) {
     const quiz = await this.prisma.quiz.findUnique({
       where: { id: quizId },
       include: {
@@ -63,99 +71,84 @@ export class QuizService {
       throw new NotFoundException('Quiz not found');
     }
 
-    return {
-      quizId: quiz.id,
-      quizTitle: quiz.title,
-      questions: quiz.questions.map(q => ({
-        id: q.id,
-        index: q.indexInQuiz,
-        text: q.text,
-        type: q.type,
-        choices: q.choices,
-        timeLimitSec: q.timeLimitSec,
-        points: q.points
-      }))
-    };
+    return quiz;
   }
 
-  async getSessionQuestions(sessionCode: string) {
-    const session = await this.prisma.quizSession.findUnique({
-      where: { sessionCode: sessionCode },
+  async updateQuiz(quizId: string, dto: { title?: string; settings?: any }) {
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { id: quizId }
+    });
+
+    if (!quiz) {
+      throw new NotFoundException('Quiz not found');
+    }
+
+    const updatedQuiz = await this.prisma.quiz.update({
+      where: { id: quizId },
+      data: {
+        ...(dto.title && { title: dto.title }),
+        ...(dto.settings && { settings: dto.settings })
+      }
+    });
+
+    return updatedQuiz;
+  }
+
+  async deleteQuiz(quizId: string) {
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { id: quizId },
       include: {
-        quiz: {
+        questions: true,
+        sessions: {
           include: {
-            questions: {
-              orderBy: { indexInQuiz: 'asc' }
+            teams: {
+              include: {
+                answers: true
+              }
             }
           }
         }
       }
     });
 
-    if (!session) {
-      throw new NotFoundException('Session not found');
+    if (!quiz) {
+      throw new NotFoundException('Quiz not found');
     }
 
-    return {
-      sessionId: session.id,
-      sessionCode: session.sessionCode,
-      quizId: session.quizId,
-      quizTitle: session.quiz.title,
-      questions: session.quiz.questions.map(q => ({
-        id: q.id,
-        index: q.indexInQuiz,
-        text: q.text,
-        type: q.type,
-        choices: q.choices,
-        timeLimitSec: q.timeLimitSec,
-        points: q.points
-      }))
-    };
-  }
-
-  /**
-   * Get only the current active question for a session
-   * This prevents teams from seeing all questions via browser DevTools
-   */
-  async getCurrentQuestion(sessionCode: string) {
-    const session = await this.prisma.quizSession.findUnique({
-      where: { sessionCode },
-      include: {
-        quiz: {
-          include: {
-            questions: {
-              orderBy: { indexInQuiz: 'asc' }
-            }
-          }
-        }
+    // Manuel cascade delete - ilişkili tüm verileri sil
+    // 1. Session'lara bağlı answer'ları sil
+    for (const session of quiz.sessions) {
+      for (const team of session.teams) {
+        await this.prisma.answer.deleteMany({
+          where: { teamId: team.id }
+        });
       }
+
+      // 2. Session'a bağlı team'leri sil
+      await this.prisma.team.deleteMany({
+        where: { sessionId: session.id }
+      });
+    }
+
+    // 3. Session'ları sil
+    await this.prisma.quizSession.deleteMany({
+      where: { quizId }
     });
 
-    if (!session) {
-      throw new NotFoundException('Session not found');
-    }
+    // 4. Question'ları sil
+    await this.prisma.question.deleteMany({
+      where: { quizId }
+    });
 
-    const currentIndex = session.currentQuestionIndex || 0;
-    const currentQuestion = session.quiz.questions[currentIndex];
-
-    if (!currentQuestion) {
-      throw new NotFoundException('No active question found');
-    }
+    // 5. Quiz'i sil
+    await this.prisma.quiz.delete({
+      where: { id: quizId }
+    });
 
     return {
-      sessionId: session.id,
-      sessionCode: session.sessionCode,
-      currentQuestionIndex: currentIndex,
-      totalQuestions: session.quiz.questions.length,
-      question: {
-        id: currentQuestion.id,
-        index: currentQuestion.indexInQuiz,
-        text: currentQuestion.text,
-        type: currentQuestion.type,
-        choices: currentQuestion.choices,
-        timeLimitSec: currentQuestion.timeLimitSec,
-        points: currentQuestion.points
-      }
+      message: 'Quiz deleted successfully',
+      deletedSessions: quiz.sessions.length,
+      deletedQuestions: quiz.questions.length
     };
   }
 }

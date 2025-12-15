@@ -7,22 +7,24 @@ import { AuthModule } from './auth/auth.module';
 import { QuizModule } from './quiz/quiz.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AppController } from './app.controller';
-import { AnswerModule } from './answer/answer.module';
 import { TeamModule } from './team/team.module';
-import { ScoreboardModule } from './scoreboard/scoreboard.module';
+import { UsersModule } from './users/users.module';
+import { QuestionsModule } from './questions/questions.module';
+import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
-imports: [
-ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
-PrismaModule,
-RedisModule,
-AuthModule,
-QuizModule,
-RealtimeModule,
-AnswerModule,
-TeamModule,
-ScoreboardModule
-],
-controllers: [AppController], 
+    imports: [
+        ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+        PrismaModule,
+        RedisModule,
+        AuthModule,
+        QuizModule,
+        RealtimeModule,
+        TeamModule,
+        UsersModule,
+        QuestionsModule,
+        SessionsModule,
+    ],
+    controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule { }

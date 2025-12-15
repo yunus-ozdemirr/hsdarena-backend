@@ -6,6 +6,7 @@ import { WebsocketAuthGuard } from './guards/websocket-auth.guard';
 import { WsThrottlerGuard } from './guards/ws-throttler.guard';
 import { WsLoggingInterceptor } from './interceptors/ws-logging.interceptor';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SessionsModule } from '../sessions/sessions.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    SessionsModule,
   ],
   providers: [
     QuizGateway,
@@ -26,4 +28,4 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   ],
   exports: [QuizGateway]
 })
-export class RealtimeModule {}
+export class RealtimeModule { }

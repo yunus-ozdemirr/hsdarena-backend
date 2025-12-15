@@ -10,27 +10,18 @@ import { ApiOperation, ApiTags, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../infra/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { IsNotEmpty, IsString } from 'class-validator';
 import { TeamService } from './team.service';
+import { JoinTeamDto } from './dto/join-team.dto';
 
-class TeamJoinDto {
-  @IsString()
-  @IsNotEmpty()
-  sessionCode: string;
 
-  @IsString()
-  @IsNotEmpty()
-  teamName: string;
-}
-
-@ApiTags('team')
-@Controller('team')
+@ApiTags('teams')
+@Controller('teams')
 export class TeamController {
   constructor(
     private jwtService: JwtService,
     private prisma: PrismaService,
     private readonly teamService: TeamService,
-  ) {}
+  ) { }
 
   @Post('join')
   @ApiOperation({
@@ -39,7 +30,7 @@ export class TeamController {
   })
   @ApiBody({
     description: 'Team join request containing session code and team name.',
-    type: TeamJoinDto,
+    type: JoinTeamDto,
     schema: {
       type: 'object',
       properties: {
@@ -49,8 +40,8 @@ export class TeamController {
       required: ['sessionCode', 'teamName']
     }
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Team joined successfully. Returns teamId, token, quizId and sessionCode.',
     schema: {
       type: 'object',
@@ -62,9 +53,9 @@ export class TeamController {
       }
     }
   })
-  @ApiResponse({ status: 404, description: 'Session with the given code was not found.'})
-  @ApiResponse({ status: 409, description: 'A team with this name already exists in the session.'})
-  async joinSession(@Body() dto: TeamJoinDto) {
+  @ApiResponse({ status: 404, description: 'Session with the given code was not found.' })
+  @ApiResponse({ status: 409, description: 'A team with this name already exists in the session.' })
+  async joinSession(@Body() dto: JoinTeamDto) {
     const session = await this.prisma.quizSession.findUnique({
       where: { sessionCode: dto.sessionCode },
     });
@@ -106,8 +97,8 @@ export class TeamController {
       type: 'team',
     });
 
-    return { 
-      teamId: team.id, 
+    return {
+      teamId: team.id,
       teamToken,
       quizId: session.quizId,
       sessionCode: session.sessionCode
